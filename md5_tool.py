@@ -11,7 +11,8 @@ import sys
 import os
 from PyQt5.QtCore import pyqtSlot, QMetaObject
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QGridLayout, QTextEdit,
-    QPushButton, QFileDialog, QProgressBar, QMessageBox, QApplication)
+    QPushButton, QFileDialog, QProgressBar, QMessageBox, QCheckBox, 
+    QLabel, QApplication)
 import hashlib
 from datetime import datetime
 
@@ -19,15 +20,15 @@ from datetime import datetime
 Algorithm = {
     "md5": {
         "obj": None,
-        "digest": None,
+        "flag": True,
     },
     "sha1": {
         "obj": None,
-        "digest": None,
+        "flag": True,
     },
     "sha256": {
         "obj": None,
-        "digest": None,
+        "flag": True,
     },
 }
 
@@ -69,8 +70,25 @@ class MD5UI(QMainWindow):
         self.savebutton.setText("保存")
         self.grid.addWidget(self.savebutton, 2, 3)
 
+        self.label = QLabel("  选择算法：")
+        self.grid.addWidget(self.label, 3, 0)
+        self.check_md5 = QCheckBox('MD5', self)
+        self.check_md5.setChecked(True)
+        self.grid.addWidget(self.check_md5, 3, 1)
+        # self.check_md5.stateChanged.connect(self.choose)
+        self.check_sha1 = QCheckBox('SHA1', self)
+        self.check_sha1.setChecked(True)
+        self.grid.addWidget(self.check_sha1, 3, 2)
+        # self.check_2.stateChanged.connect(self.choose)
+        self.check_sha256 = QCheckBox('SHA256', self)
+        self.check_sha256.setChecked(True)
+        self.grid.addWidget(self.check_sha256, 3, 3)
+        # self.check_3.stateChanged.connect(self.choose)
+
+        self.label2 = QLabel("  进度：")
+        self.grid.addWidget(self.label2, 4, 0)
         self.pbar = QProgressBar(self.centralWidget)
-        self.grid.addWidget(self.pbar, 3, 0, 1, 4)
+        self.grid.addWidget(self.pbar, 5, 0, 1, 4)
         self.pbar.setValue(0)
 
         self.centralWidget.setLayout(self.grid)
@@ -96,20 +114,23 @@ class MD5UI(QMainWindow):
                 Algorithm[agm]["obj"] = hashlib.__dict__[agm]()
             m = hashlib.md5()
             count = 0
+            self.check_agm()
             with open(fname, 'rb') as fr:
                 while True:
                     data = fr.read(self.block_size)
                     if not data:
                         break
                     for agm in Algorithm:
-                        Algorithm[agm]["obj"].update(data)
+                        if Algorithm[agm]["flag"]:
+                            Algorithm[agm]["obj"].update(data)
                     m.update(data)
                     count += self.block_size
                     self.update_pbar(count, size)
             digest = ""
             for agm in Algorithm:
-                d = Algorithm[agm]["obj"].hexdigest()
-                digest += f"{agm.upper()}: {d}\n"
+                if Algorithm[agm]["flag"]:
+                    d = Algorithm[agm]["obj"].hexdigest()
+                    digest += f"{agm.upper()}: {d}\n"
             self.content += f"文件：{fname}\n" \
                             f"大小: {size:,} 字节\n" \
                             f"修改时间: {mtime}\n" \
@@ -118,6 +139,12 @@ class MD5UI(QMainWindow):
             self.default_dir = os.path.split(fname)[0]
         except Exception as ex:
             QMessageBox.warning(self, '异常', f"读取文件失败：{ex}")
+
+    def check_agm(self):
+        for agm in Algorithm:
+            box_name = f"check_{agm}"
+            check_name = getattr(self, box_name)
+            Algorithm[agm]['flag'] = check_name.isChecked()
 
     @pyqtSlot()
     def on_clear_clicked(self):
